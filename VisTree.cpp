@@ -119,6 +119,7 @@ public:
 	void draw() {
 		DrawFormatString(lx, ly, 0, s.c_str());
 	}
+	int length() { return s.length(); }
 };
 
 class TextBox : public Text {
@@ -167,8 +168,8 @@ int SizeX = windowSizeX;
 
 void createText() {
 	for (int v = 0; v < n; v++) {
-		int cy = SizeY * (depth[v] + 1) / (maxDepth + 2);
-		int cx = SizeX * (ord[v] + 1) / (width[depth[v]] + 1);
+		int cx = SizeX * (depth[v] + 1) / (maxDepth + 2);
+		int cy = SizeY * (ord[v] + 1) / (width[depth[v]] + 1);
 		int ly, lx, ry, rx;
 		setLeftPos(cx, cy, s[v].length(), lx, ly);
 		setRightPos(cx, cy, s[v].length(), rx, ry);
@@ -222,19 +223,20 @@ public:
 
 vector<Arrow> arrow;
 
+//矢印の生成（createText, Textクラスの実装に依存）
 void createArrow() {
 	for (int i = 0; i < n; i++) {
 		for (int j = 0; j < et[i].size(); j++) {
 			int src = i;
 			int dst = et[i][j];
 
-			//srcの下部
-			int x1 = SizeX * (ord[src] + 1) / (width[depth[src]] + 1);
-			int y1 = SizeY * (depth[src] + 1) / (maxDepth + 2) + fontSize / 2;
+			//srcの右部
+			int x1 = SizeX * (depth[src] + 1) / (maxDepth + 2) + text[src].length() * fontSize / 2 / 1.75;
+			int y1 = SizeY * (ord[src] + 1) / (width[depth[src]] + 1);
 
-			//dstの上部
-			int x2 = SizeX * (ord[dst] + 1) / (width[depth[dst]] + 1);
-			int y2 = SizeY * (depth[dst] + 1) / (maxDepth + 2) - fontSize / 2;
+			//dstの左部
+			int x2 = SizeX * (depth[dst] + 1) / (maxDepth + 2) - text[dst].length() * fontSize / 2 / 1.75;
+			int y2 = SizeY * (ord[dst] + 1) / (width[depth[dst]] + 1);
 
 			arrow.push_back(Arrow(x1, y1, x2, y2, 10, 0));
 		}
