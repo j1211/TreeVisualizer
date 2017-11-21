@@ -58,8 +58,8 @@ void dfs(int v, int dep) {
 }
 
 /*拡大縮小平行移動*/
-const int windowSizeX = 1000;
-const int windowSizeY = 700;
+const int windowSizeX = 1500;
+const int windowSizeY = 1000;
 double scale;					//拡大率
 double Tx, Ty;					//平行移動（拡大前に図形を平行移動する）
 
@@ -109,17 +109,39 @@ class Text {
 protected:
 	int lx, ly;
 	string s;
+	vector<string> splitedS;	//$(改行)ごとに区切った文字列
+
+	void makeSplitedS() {
+		splitedS.clear();
+		string tmp;
+		for (int i = 0; i < s.length(); i++) {
+			if (s[i] == '$') {
+				splitedS.push_back(tmp);
+				tmp.clear();
+			}
+			else {
+				tmp += s[i];
+			}
+		}
+		splitedS.push_back(tmp);
+	}
+
 public:
 	Text() {
 
 	}
 	Text(int lx, int ly, string s) {
 		this->lx = lx; this->ly = ly; this->s = s;
+		makeSplitedS();
 	}
-	void draw() {
-		DrawFormatString(lx, ly, 0, s.c_str());
+	void draw(int fontSize) {
+		for (int i = 0; i < splitedS.size(); i++) {
+			DrawFormatString(lx, ly + fontSize * i, 0, "%s", splitedS[i].c_str());
+		}
 	}
 	int length() { return s.length(); }
+	int width() { int ret = 0; for (int i = 0; i < splitedS.size(); i++) ret = max(ret, splitedS[i].length()); return ret; }
+	int height() { return splitedS.size(); }
 };
 
 class TextBox : public Text {
@@ -129,9 +151,10 @@ public:
 	TextBox(int lx, int ly, int rx, int ry, string s) {
 		this->lx = lx; this->ly = ly; this->s = s;
 		this->rx = rx; this->ry = ry;
+		makeSplitedS();
 	}
 
-	void draw() {
+	void draw(int fontSize) {
 		int lx = to_drawX(this->lx);
 		int ly = to_drawY(this->ly);
 		int rx = to_drawX(this->rx);
@@ -141,39 +164,46 @@ public:
 		if (ly > ry) swap(ly, ry);
 
 		DrawBox(lx, ly, rx, ry, 0, FALSE);
-		DrawFormatString(lx, ly, 0, s.c_str());
+		for (int i = 0; i < splitedS.size(); i++) {
+			DrawFormatString(lx, to_drawY(this->ly + fontSize * i), 0, "%s", splitedS[i].c_str());
+		}
+		
 	}
 };
 
 TextBox text[100];
-const int fontSize = 30;
+const int fontSize = 15;
 
-void setLeftPos(int cx, int cy, int text_length, int &lx, int &ly) {
+void setLeftPos(int cx, int cy, int text_length, int &lx, int &ly, int rowNum) {
 	int tx = -(double)fontSize * text_length / 2 / 1.75;
-	int ty = -fontSize / 2;
+	int ty = -fontSize / 2 * rowNum;
 	lx = cx + tx;
 	ly = cy + ty;
 }
 
-void setRightPos(int cx, int cy, int text_length, int &rx, int &ry) {
+void setRightPos(int cx, int cy, int text_length, int &rx, int &ry, int rowNum) {
 	int tx = (double)fontSize * text_length / 2 / 1.75;
-	int ty = fontSize / 2;
+	int ty = fontSize / 2 * rowNum;
 	rx = cx + tx;
 	ry = cy + ty;
 }
 
 //配置範囲
-int SizeY = windowSizeY;
-int SizeX = windowSizeX;
+int SizeY = windowSizeY * 0.5;
+int SizeX = windowSizeX * 0.8;
 
 void createText() {
 	for (int v = 0; v < n; v++) {
+		//1行目の中心
 		int cx = SizeX * (depth[v] + 1) / (maxDepth + 2);
-		int cy = SizeY * (ord[v] + 1) / (width[depth[v]] + 1);
+		int cy = SizeY * (ord[v] + 1) / (width[depth[v]] + 1); if (depth[v] >= 3) cy += 50;
+		//テキスト生成
 		int ly, lx, ry, rx;
-		setLeftPos(cx, cy, s[v].length(), lx, ly);
-		setRightPos(cx, cy, s[v].length(), rx, ry);
-		text[v] = TextBox(lx, ly, rx, ry, s[v]);
+		TextBox dumy = TextBox(lx, ly, rx, ry, s[v]);
+
+		setLeftPos(cx, cy, dumy.width(), lx, ly, dumy.height());
+		setRightPos(cx, cy, dumy.width(), rx, ry, dumy.height());
+		text[v] = TextBox(lx, ly - 2, rx, ry + 2, s[v]);
 	}
 }
 
@@ -231,12 +261,12 @@ void createArrow() {
 			int dst = et[i][j];
 
 			//srcの右部
-			int x1 = SizeX * (depth[src] + 1) / (maxDepth + 2) + text[src].length() * fontSize / 2 / 1.75;
-			int y1 = SizeY * (ord[src] + 1) / (width[depth[src]] + 1);
+			int x1 = SizeX * (depth[src] + 1) / (maxDepth + 2) + text[src].width() * fontSize / 2 / 1.75;
+			int y1 = SizeY * (ord[src] + 1) / (width[depth[src]] + 1); if (depth[src] >= 3) y1 += 50;
 
 			//dstの左部
-			int x2 = SizeX * (depth[dst] + 1) / (maxDepth + 2) - text[dst].length() * fontSize / 2 / 1.75;
-			int y2 = SizeY * (ord[dst] + 1) / (width[depth[dst]] + 1);
+			int x2 = SizeX * (depth[dst] + 1) / (maxDepth + 2) - text[dst].width() * fontSize / 2 / 1.75;
+			int y2 = SizeY * (ord[dst] + 1) / (width[depth[dst]] + 1); if (depth[dst] >= 3) y2 += 50;
 
 			arrow.push_back(Arrow(x1, y1, x2, y2, 10, 0));
 		}
@@ -246,7 +276,7 @@ void createArrow() {
 /*描画など*/
 void draw() {
 	for (int v = 0; v < n; v++) {
-		text[v].draw();
+		text[v].draw(fontSize);
 	}
 	for (int i = 0; i < arrow.size(); i++) {
 		arrow[i].draw();
